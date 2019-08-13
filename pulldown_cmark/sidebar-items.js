@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Alignment",""],["CowStr",""],["Event",""],["LinkType",""],["Tag",""]],"mod":[["html","HTML renderer that takes an iterator of events as input."]],"struct":[["InlineStr",""],["OffsetIter",""],["Options",""],["Parser",""]]});
