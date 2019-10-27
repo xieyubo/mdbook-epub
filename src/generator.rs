@@ -112,7 +112,8 @@ impl<'a> Generator<'a> {
         let html = self.hbs.render("index", &json!({"content": html}))?;
         let data = Cursor::new(Vec::from(html));
 
-        let path = ch.path.with_extension("html").display().to_string();
+        let path = str::replace(&ch.path.with_extension("html").display().to_string(), "\\", "/");
+        log::debug!("Adding path \"{}\"", path);
         let mut content = EpubContent::new(path, data).title(format!("{}", ch));
 
         let level = ch.number.as_ref().map(|n| n.len() as i32 - 1).unwrap_or(0);
@@ -152,7 +153,6 @@ impl<'a> Generator<'a> {
             .context("Inspecting the book for additional assets failed")?;
 
         for asset in assets {
-            log::debug!("Embedding {}", asset.filename.display());
             self.load_asset(&asset)
                 .with_context(|_| format!("Couldn't load {}", asset.filename.display()))?;
         }
@@ -168,6 +168,7 @@ impl<'a> Generator<'a> {
         // Change '\\' to '/'
         let filename = asset.filename.to_str().unwrap();
         let filename = str::replace(&filename, "\\", "/");
+        log::debug!("load_asset {}", filename);
 
         self.builder
             .add_resource(filename, content, mt)

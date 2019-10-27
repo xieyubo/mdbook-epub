@@ -18,11 +18,12 @@ pub(crate) fn find(ctx: &RenderContext) -> Result<Vec<Asset>, Error> {
         if let BookItem::Chapter(ref ch) = *section {
             log::trace!("Searching {} for links and assets", ch);
 
-            let full_path = src_dir.join(&ch.path);
-            let parent = full_path
-                .parent()
-                .expect("All book chapters have a parent directory");
-            let found = assets_in_markdown(&ch.content, parent)?;
+            let mut full_path = src_dir.to_path_buf();
+            for s in ch.path.to_str().unwrap().split("/") {
+                full_path.push(s);
+            }
+            full_path.pop();
+            let found = assets_in_markdown(&ch.content, &full_path)?;
 
             for full_filename in found {
                 let relative = full_filename.strip_prefix(&src_dir).unwrap();
