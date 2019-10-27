@@ -1,11 +1,11 @@
 [package]
-authors = ["Michael Bryan <michaelfbryan@gmail.com>"]
-description = "An EPUB renderer for mdbook."
+authors = ["Michael Bryan <michaelfbryan@gmail.com>", "xyb@xyb.name"]
+description = "An EPUB renderer for mdbook (xyb fork)."
 name = "mdbook-epub"
-version = "0.3.1-alpha.0"
+version = "0.3.1-alpha.1"
 readme = "README.md"
 license = "MIT"
-repository = "https://github.com/Michael-F-Bryan/mdbook-epub"
+repository = "https://github.com/xieyubo/mdbook-epub"
 documentation = "https://docs.rs/mdbook-epub"
 keywords = ["epub", "mdbook", "documentation"]
 categories = ["command-line-interface", "development-tools"]
@@ -26,7 +26,10 @@ doc = false
 epub-builder = "0.4"
 failure = "0.1.1"
 failure_derive = "0.1.1"
+handlebars = "2.0"
+lazy_static = "1.0"
 pulldown-cmark = "0.5"
+regex = "1.0.0"
 semver = "0.9"
 serde = "1.0"
 serde_derive = "1.0"

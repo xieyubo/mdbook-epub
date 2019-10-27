@@ -3,6 +3,7 @@ use mdbook::book::BookItem;
 use mdbook::renderer::RenderContext;
 use mime_guess::{self, Mime};
 use pulldown_cmark::{Event, Parser, Tag};
+use regex::Regex;
 use std::path::{Path, PathBuf};
 
 pub(crate) fn find(ctx: &RenderContext) -> Result<Vec<Asset>, Error> {
@@ -61,10 +62,26 @@ impl Asset {
 
 fn assets_in_markdown(src: &str, parent_dir: &Path) -> Result<Vec<PathBuf>, Error> {
     let mut found = Vec::new();
-
     for event in Parser::new(src) {
-        if let Event::Start(Tag::Image(_, dest, _)) = event {
-            found.push(dest.to_string());
+        match event {
+            Event::Start(Tag::Image(_, dest, _)) => {
+                found.push(dest.to_string());
+            }
+            Event::Html(html) => {
+                lazy_static! {
+                    static ref HTML_LINK: Regex =
+                        Regex::new(r#"(<(?:a|img) [^>]*?(?:src|href)=")([^"]+?)""#).unwrap();
+                }
+                let captures = HTML_LINK.captures(&html);
+                if !captures.is_none() {
+                    let path = captures.unwrap().get(2);
+                    if !path.is_none() {
+                        found.push(path.unwrap().as_str().to_string());
+                    }
+                }
+            }
+            _ => {
+            }
         }
     }
 
@@ -79,8 +96,10 @@ fn assets_in_markdown(src: &str, parent_dir: &Path) -> Result<Vec<PathBuf>, Erro
     let mut assets = Vec::new();
 
     for link in found {
-        let link = PathBuf::from(link);
-        let filename = parent_dir.join(link);
+        let mut filename = parent_dir.to_path_buf();
+        for s in link.split("/") {
+            filename.push(s);
+        }
         let filename = filename.canonicalize().with_context(|_| {
             format!(
                 "Unable to fetch the canonical path for {}",

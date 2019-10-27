@@ -3,9 +3,14 @@ use std::io::{Cursor, Read, Write};
 
 use epub_builder::{EpubBuilder, EpubContent, TocElement, ZipLibrary};
 use failure::{Error, ResultExt};
+use handlebars::Handlebars;
 use mdbook::book::{BookItem, Chapter};
 use mdbook::renderer::RenderContext;
+use mdbook::theme::Theme;
 use pulldown_cmark::{html, Parser};
+use serde_json::json;
+use std::env;
+use std::path::PathBuf;
 
 use crate::config::Config;
 use crate::resources::{self, Asset};
@@ -18,6 +23,7 @@ pub struct Generator<'a> {
     ctx: &'a RenderContext,
     builder: EpubBuilder<ZipLibrary>,
     config: Config,
+    hbs: Handlebars,
 }
 
 impl<'a> Generator<'a> {
@@ -26,10 +32,29 @@ impl<'a> Generator<'a> {
 
         let config = Config::from_render_context(ctx)?;
 
+        let mut theme_dir: PathBuf;
+        let env_theme_dir = env::var("MDBOOKEPUB_THEME_DIR");
+        if env_theme_dir.is_ok() {
+            theme_dir = PathBuf::from(env_theme_dir.unwrap());
+        } else {
+            theme_dir = env::current_exe().unwrap().parent().unwrap().to_path_buf();
+            theme_dir.push("theme");
+        }
+        log::debug!("theme_dir: {}", theme_dir.display());
+        if !theme_dir.exists() {
+            panic!("theme dir \"{}\" doesn't exist.", theme_dir.display());
+        }
+
+        let theme = Theme::new(theme_dir);
+
+        let mut hbs = Handlebars::new();
+        hbs.register_template_string("index", String::from_utf8(theme.index.clone())?)?;
+
         Ok(Generator {
             builder,
             ctx,
             config,
+            hbs
         })
     }
 
@@ -85,6 +110,7 @@ impl<'a> Generator<'a> {
         let mut buffer = String::new();
         html::push_html(&mut buffer, Parser::new(&ch.content));
 
+        let buffer = self.hbs.render("index", &json!({"content": buffer}))?;
         let data = Cursor::new(Vec::from(buffer));
 
         let path = ch.path.with_extension("html").display().to_string();
@@ -104,13 +130,6 @@ impl<'a> Generator<'a> {
         }
 
         self.builder.add_content(content).sync()?;
-
-        // second pass to actually add the sub-chapters
-        for sub_item in &ch.sub_items {
-            if let BookItem::Chapter(ref sub_ch) = *sub_item {
-                self.add_chapter(sub_ch)?;
-            }
-        }
 
         Ok(())
     }
@@ -147,8 +166,12 @@ impl<'a> Generator<'a> {
 
         let mt = asset.mimetype.to_string();
 
+        // Change '\\' to '/'
+        let filename = asset.filename.to_str().unwrap();
+        let filename = str::replace(&filename, "\\", "/");
+
         self.builder
-            .add_resource(&asset.filename, content, mt)
+            .add_resource(filename, content, mt)
             .sync()?;
 
         Ok(())

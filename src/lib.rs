@@ -16,6 +16,8 @@
 extern crate failure_derive;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate lazy_static;
 
 use failure::Error;
 use mdbook::config::Config as MdConfig;
