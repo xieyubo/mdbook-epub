@@ -7,7 +7,7 @@ use handlebars::Handlebars;
 use mdbook::book::{BookItem, Chapter};
 use mdbook::renderer::RenderContext;
 use mdbook::theme::Theme;
-use pulldown_cmark::{html, Parser};
+use regex::Regex;
 use serde_json::json;
 use std::env;
 use std::path::PathBuf;
@@ -107,11 +107,10 @@ impl<'a> Generator<'a> {
     }
 
     fn add_chapter(&mut self, ch: &Chapter) -> Result<(), Error> {
-        let mut buffer = String::new();
-        html::push_html(&mut buffer, Parser::new(&ch.content));
-
-        let buffer = self.hbs.render("index", &json!({"content": buffer}))?;
-        let data = Cursor::new(Vec::from(buffer));
+        let html = mdbook::utils::render_markdown(&ch.content, /*curly_quotes=*/false);
+        let html = self.fix_html(html);
+        let html = self.hbs.render("index", &json!({"content": html}))?;
+        let data = Cursor::new(Vec::from(html));
 
         let path = ch.path.with_extension("html").display().to_string();
         let mut content = EpubContent::new(path, data).title(format!("{}", ch));
@@ -193,5 +192,21 @@ impl<'a> Generator<'a> {
         }
 
         Ok(stylesheet)
+    }
+
+    fn fix_html(&self, html: String) -> String {
+        let html = self.fix_img(html);
+        return html;
+    }
+
+    fn fix_img(&self, html: String) -> String {
+        lazy_static! {
+            static ref IMG: Regex =
+                    Regex::new(r"(?P<img><img\s+[^>]*/>)").unwrap();
+        }
+
+        // As epub standard, img should be inside a block element.
+        // So here, always put <img ... /> into a <p>.
+        return IMG.replace_all(&html, "<p>$img</p>").to_string();
     }
 }
