@@ -1,0 +1,6 @@
+pool:
+  vmImage: 'ubuntu-18.04'
+
+steps:
+  - script: cargo build
+    displayName: Cargo build
