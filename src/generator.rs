@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
 
-use epub_builder::{EpubBuilder, EpubContent, TocElement, ZipLibrary};
+use epub_builder::{EpubBuilder, EpubContent, ZipLibrary};
 use failure::{Error, ResultExt};
 use handlebars::Handlebars;
 use mdbook::book::{BookItem, Chapter};
@@ -118,16 +118,6 @@ impl<'a> Generator<'a> {
 
         let level = ch.number.as_ref().map(|n| n.len() as i32 - 1).unwrap_or(0);
         content = content.level(level);
-
-        // unfortunately we need to do two passes through `ch.sub_items` here.
-        // The first pass will add each sub-item to the current chapter's toc
-        // and the second pass actually adds the sub-items to the book.
-        for sub_item in &ch.sub_items {
-            if let BookItem::Chapter(ref sub_ch) = *sub_item {
-                let child_path = sub_ch.path.with_extension("html").display().to_string();
-                content = content.child(TocElement::new(child_path, format!("{}", sub_ch)));
-            }
-        }
 
         self.builder.add_content(content).sync()?;
 
