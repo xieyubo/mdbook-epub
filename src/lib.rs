@@ -93,7 +93,19 @@ pub fn generate(ctx: &RenderContext) -> Result<(), Error> {
 /// Calculate the output filename using the `mdbook` config.
 pub fn output_filename(dest: &Path, config: &MdConfig) -> PathBuf {
     match config.book.title {
-        Some(ref title) => dest.join(title).with_extension("epub"),
+        Some(ref title) => {
+            // Title may contain invalid characters of path, correct it.
+            let s: String = title.chars().map(|x| match x {
+                'A'..='Z' => x,
+                'a'..='z' => x,
+                '0'..='9' => x,
+                '_' => x,
+                '-' => x,
+                '.' => x,
+                _ => '_'
+            }).collect();
+            dest.join(s).with_extension("epub")
+        },
         None => dest.join("book.epub"),
     }
 }
